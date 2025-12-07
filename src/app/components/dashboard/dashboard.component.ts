@@ -68,6 +68,62 @@ export class DashboardComponent implements OnInit {
         return user ? `${user.nombre} ${user.apellidos}` : 'Usuario';
     });
 
+    // Computed Statistics
+    totalRestaurantes = computed(() => this.restaurantes().length);
+
+    promedioCalificacion = computed(() => {
+        const restaurantes = this.restaurantes();
+        if (restaurantes.length === 0) return 0;
+        const calificaciones = restaurantes
+            .filter(r => r.calificacion !== null && r.calificacion !== undefined)
+            .map(r => Number(r.calificacion))
+            .filter(cal => !isNaN(cal) && cal > 0);
+        if (calificaciones.length === 0) return 0;
+        const suma = calificaciones.reduce((acc, cal) => acc + cal, 0);
+        const promedio = suma / calificaciones.length;
+        return isNaN(promedio) ? 0 : Math.round(promedio * 10) / 10;
+    });
+
+    topCocina = computed(() => {
+        const restaurantes = this.restaurantes();
+        if (restaurantes.length === 0) return 'N/A';
+        const conteo: { [key: string]: number } = {};
+        restaurantes.forEach(r => {
+            if (r.tipo_cocina) {
+                conteo[r.tipo_cocina] = (conteo[r.tipo_cocina] || 0) + 1;
+            }
+        });
+        const cocinas = Object.entries(conteo);
+        if (cocinas.length === 0) return 'N/A';
+        cocinas.sort((a, b) => b[1] - a[1]);
+        return cocinas[0][0];
+    });
+
+    // Helper for star ratings (returns array of star states: 'full', 'half', 'empty')
+    getStarStates(rating: number | undefined): string[] {
+        const stars: string[] = [];
+        const actualRating = rating || 0;
+        for (let i = 1; i <= 5; i++) {
+            if (actualRating >= i) {
+                stars.push('full');
+            } else if (actualRating >= i - 0.5) {
+                stars.push('half');
+            } else {
+                stars.push('empty');
+            }
+        }
+        return stars;
+    }
+
+    // Set rating from star click in modal
+    setRating(value: number): void {
+        this.formData.update(current => ({
+            ...current,
+            calificacion: value === 0 ? undefined : value
+        }));
+        this.validateCalificacion();
+    }
+
     constructor(
         private restaurantService: RestaurantService,
         private authService: AuthService,

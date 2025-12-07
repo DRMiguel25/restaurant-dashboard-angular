@@ -102,8 +102,10 @@
             </button>
         </div>
 
-        <!-- Stats Card -->
-        <div class="stats shadow mb-4 md:mb-6 w-full bg-base-100 transition-all duration-300 hover:shadow-lg">
+        <!-- Stats Cards -->
+        <div
+            class="stats shadow mb-4 md:mb-6 w-full bg-base-100 transition-all duration-300 hover:shadow-lg stats-vertical sm:stats-horizontal">
+            <!-- Stat 1: Total Restaurantes -->
             <div class="stat">
                 <div class="stat-figure text-primary">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24"
@@ -112,8 +114,48 @@
                             d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
                     </svg>
                 </div>
-                <div class="stat-title text-xs md:text-sm">Total Restaurantes</div>
-                <div class="stat-value text-primary text-2xl md:text-3xl">{{ restaurantes().length }}</div>
+                <div class="stat-title text-xs md:text-sm">Total</div>
+                @if (loading()) {
+                <div class="skeleton h-8 w-16 mt-1"></div>
+                } @else {
+                <div class="stat-value text-primary text-2xl md:text-3xl">{{ totalRestaurantes() }}</div>
+                }
+                <div class="stat-desc text-xs">Restaurantes registrados</div>
+            </div>
+
+            <!-- Stat 2: Calidad Promedio -->
+            <div class="stat">
+                <div class="stat-figure text-warning">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="currentColor" viewBox="0 0 24 24">
+                        <path
+                            d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+                    </svg>
+                </div>
+                <div class="stat-title text-xs md:text-sm">Calidad Promedio</div>
+                @if (loading()) {
+                <div class="skeleton h-8 w-12 mt-1"></div>
+                } @else {
+                <div class="stat-value text-warning text-2xl md:text-3xl">{{ promedioCalificacion() }}</div>
+                }
+                <div class="stat-desc text-xs">De 5 estrellas</div>
+            </div>
+
+            <!-- Stat 3: Tendencia (Top Cocina) -->
+            <div class="stat">
+                <div class="stat-figure text-secondary">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24"
+                        stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                    </svg>
+                </div>
+                <div class="stat-title text-xs md:text-sm">Tendencia</div>
+                @if (loading()) {
+                <div class="skeleton h-8 w-20 mt-1"></div>
+                } @else {
+                <div class="stat-value text-secondary text-lg md:text-xl truncate max-w-[120px]">{{ topCocina() }}</div>
+                }
+                <div class="stat-desc text-xs">Cocina más popular</div>
             </div>
         </div>
 
@@ -146,15 +188,7 @@
             </div>
         </div>
 
-        <!-- Loading Spinner -->
-        @if (loading()) {
-        <div class="flex justify-center items-center py-12">
-            <span class="loading loading-spinner loading-lg text-primary"></span>
-        </div>
-        }
-
         <!-- Restaurant Table / Cards -->
-        @if (!loading()) {
         <div class="card bg-base-100 shadow-xl overflow-hidden transition-all duration-300 hover:shadow-2xl">
             <div class="overflow-x-auto">
                 <table class="table">
@@ -170,7 +204,48 @@
                         </tr>
                     </thead>
                     <tbody>
-                        @if (restaurantes().length === 0) {
+                        <!-- Skeleton Loading Rows -->
+                        @if (loading()) {
+                        @for (i of [1, 2, 3, 4, 5]; track i) {
+                        <tr class="animate-pulse">
+                            <td>
+                                <div class="flex items-center gap-3">
+                                    <div class="skeleton w-10 h-10 md:w-12 md:h-12 rounded-lg"></div>
+                                    <div class="min-w-0 space-y-2">
+                                        <div class="skeleton h-4 w-28 md:w-36"></div>
+                                        <div class="skeleton h-3 w-20 md:w-24"></div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td class="hidden md:table-cell">
+                                <div class="skeleton h-5 w-16 rounded-full"></div>
+                            </td>
+                            <td class="hidden sm:table-cell">
+                                <div class="skeleton h-5 w-10 rounded-full"></div>
+                            </td>
+                            <td>
+                                <div class="skeleton h-4 w-10"></div>
+                            </td>
+                            <td class="hidden lg:table-cell">
+                                <div class="skeleton h-4 w-24"></div>
+                            </td>
+                            <td class="hidden md:table-cell">
+                                <div class="flex items-center gap-2">
+                                    <div class="skeleton w-6 h-6 rounded-full"></div>
+                                    <div class="skeleton h-3 w-20"></div>
+                                </div>
+                            </td>
+                            <td>
+                                <div class="flex justify-end gap-1">
+                                    <div class="skeleton w-8 h-8 rounded"></div>
+                                    <div class="skeleton w-8 h-8 rounded"></div>
+                                </div>
+                            </td>
+                        </tr>
+                        }
+                        }
+                        <!-- Empty State -->
+                        @if (!loading() && restaurantes().length === 0) {
                         <tr>
                             <td colspan="7" class="text-center py-12">
                                 <div class="flex flex-col items-center gap-3 text-base-content/50">
@@ -185,6 +260,8 @@
                             </td>
                         </tr>
                         }
+                        <!-- Data Rows -->
+                        @if (!loading()) {
                         @for (r of restaurantes(); track r.id) {
                         <tr class="hover:bg-base-200/30 transition-all duration-200">
                             <td>
@@ -240,12 +317,15 @@
                             <td>
                                 @if (r.calificacion) {
                                 <div class="flex items-center gap-1">
-                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-warning"
-                                        fill="currentColor" viewBox="0 0 24 24">
-                                        <path
-                                            d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
-                                    </svg>
-                                    <span class="font-semibold text-sm">{{ r.calificacion }}</span>
+                                    <div class="rating rating-sm">
+                                        @for (star of getStarStates(r.calificacion); track $index) {
+                                        <input type="radio" class="mask mask-star-2"
+                                            [class.bg-orange-400]="star === 'full'"
+                                            [class.bg-orange-400/50]="star === 'half'"
+                                            [class.bg-base-300]="star === 'empty'" disabled />
+                                        }
+                                    </div>
+                                    <span class="text-xs text-base-content/60 ml-1">{{ r.calificacion }}</span>
                                 </div>
                                 } @else {
                                 <span class="text-base-content/30 text-sm">—</span>
@@ -304,11 +384,11 @@
                             </td>
                         </tr>
                         }
+                        }
                     </tbody>
                 </table>
             </div>
         </div>
-        }
     </div>
 </div>
 
@@ -428,12 +508,30 @@
 
                 <div class="form-control">
                     <label class="label py-1">
-                        <span class="label-text font-medium">Calificación (1-5)</span>
+                        <span class="label-text font-medium">Calificación</span>
+                        <span class="label-text-alt text-base-content/60">
+                            {{ formData().calificacion ? formData().calificacion + ' de 5' : 'Sin calificar' }}
+                        </span>
                     </label>
-                    <input type="number" [value]="formData().calificacion"
-                        (input)="updateFormField('calificacion', $event)" placeholder="4.5"
-                        class="input input-bordered w-full transition-all duration-200 focus:ring-2 focus:ring-primary/20"
-                        [class.input-error]="calificacionError()" min="0" max="5" step="0.1" />
+                    <div class="flex items-center gap-3 py-2">
+                        <div class="rating rating-lg">
+                            @for (i of [1, 2, 3, 4, 5]; track i) {
+                            <input type="radio" name="rating-modal"
+                                class="mask mask-star-2 bg-orange-400 transition-all duration-150 hover:scale-110 cursor-pointer"
+                                [checked]="formData().calificacion === i" (click)="setRating(i)" />
+                            }
+                        </div>
+                        @if (formData().calificacion) {
+                        <button type="button" class="btn btn-ghost btn-xs text-base-content/50 hover:text-error"
+                            (click)="setRating(0)" title="Quitar calificación">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24"
+                                stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                        </button>
+                        }
+                    </div>
                     @if (calificacionError()) {
                     <label class="label py-0">
                         <span class="label-text-alt text-error">{{ calificacionError() }}</span>
