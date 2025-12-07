@@ -39,8 +39,12 @@ export class RestaurantService {
         });
     }
 
-    listar(): Observable<ApiResponse<Restaurante[]>> {
-        return this.http.get<ApiResponse<Restaurante[]>>(`${this.apiUrl}/restaurantes`, {
+    listar(search?: string): Observable<ApiResponse<Restaurante[]>> {
+        let url = `${this.apiUrl}/restaurantes`;
+        if (search && search.trim()) {
+            url += `?q=${encodeURIComponent(search.trim())}`;
+        }
+        return this.http.get<ApiResponse<Restaurante[]>>(url, {
             headers: this.getSimpleHeaders()
         });
     }

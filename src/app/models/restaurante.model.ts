@@ -10,6 +10,7 @@ export interface Restaurante {
     horario_cierre: string;
     activo: boolean;
     usuario_registro: string;
+    nombre_creador?: string;  // Email del usuario que creó el restaurante (viene del JOIN)
     fecha_creacion?: string;
     fecha_actualizacion?: string;
 }

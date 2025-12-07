@@ -117,6 +117,35 @@
             </div>
         </div>
 
+        <!-- Search Bar -->
+        <div class="card bg-base-100 shadow-lg mb-4 md:mb-6">
+            <div class="card-body p-3 md:p-4">
+                <div class="flex flex-col sm:flex-row gap-3 items-center">
+                    <div class="relative flex-1 w-full">
+                        <input type="text" [value]="searchQuery()" (input)="onSearchChange($event)"
+                            placeholder="Buscar restaurantes por nombre..."
+                            class="input input-bordered w-full pl-10 focus:input-primary transition-all duration-200" />
+                        <svg xmlns="http://www.w3.org/2000/svg"
+                            class="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-base-content/50" fill="none"
+                            viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                        </svg>
+                    </div>
+                    @if (searchQuery()) {
+                    <button class="btn btn-ghost btn-sm gap-2" (click)="clearSearch()">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24"
+                            stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                        Limpiar
+                    </button>
+                    }
+                </div>
+            </div>
+        </div>
+
         <!-- Loading Spinner -->
         @if (loading()) {
         <div class="flex justify-center items-center py-12">
@@ -136,13 +165,14 @@
                             <th class="hidden sm:table-cell text-xs md:text-sm">Precio</th>
                             <th class="text-xs md:text-sm">Rating</th>
                             <th class="hidden lg:table-cell text-xs md:text-sm">Horario</th>
+                            <th class="hidden md:table-cell text-xs md:text-sm">Registrado Por</th>
                             <th class="text-right text-xs md:text-sm">Acciones</th>
                         </tr>
                     </thead>
                     <tbody>
                         @if (restaurantes().length === 0) {
                         <tr>
-                            <td colspan="6" class="text-center py-12">
+                            <td colspan="7" class="text-center py-12">
                                 <div class="flex flex-col items-center gap-3 text-base-content/50">
                                     <svg xmlns="http://www.w3.org/2000/svg" class="h-16 w-16 opacity-50" fill="none"
                                         viewBox="0 0 24 24" stroke="currentColor">
@@ -181,6 +211,12 @@
                                                     d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
                                             </svg>
                                             <span>{{ r.direccion }}</span>
+                                        </div>
+                                        }
+                                        <!-- Creator info - visible only on mobile -->
+                                        @if (r.nombre_creador) {
+                                        <div class="md:hidden text-xs text-base-content/60 mt-1 truncate max-w-[140px]">
+                                            <span class="opacity-70">Creado por:</span> {{ r.nombre_creador }}
                                         </div>
                                         }
                                     </div>
@@ -227,6 +263,21 @@
                                 </div>
                                 } @else {
                                 <span class="text-base-content/30 text-sm">—</span>
+                                }
+                            </td>
+                            <td class="hidden md:table-cell">
+                                @if (r.nombre_creador) {
+                                <div class="flex items-center gap-2">
+                                    <div class="avatar placeholder">
+                                        <div class="bg-success/20 text-success rounded-full w-6">
+                                            <span class="text-xs">{{ r.nombre_creador.charAt(0).toUpperCase() }}</span>
+                                        </div>
+                                    </div>
+                                    <span class="text-xs text-base-content/70 truncate max-w-[120px]">{{
+                                        r.nombre_creador }}</span>
+                                </div>
+                                } @else {
+                                <span class="text-base-content/30 text-xs">—</span>
                                 }
                             </td>
                             <td>
@@ -323,8 +374,18 @@
                         <span class="label-text font-medium">Teléfono</span>
                     </label>
                     <input type="tel" [value]="formData().telefono" (input)="updateFormField('telefono', $event)"
-                        placeholder="(123) 456-7890"
-                        class="input input-bordered w-full transition-all duration-200 focus:ring-2 focus:ring-primary/20" />
+                        placeholder="1234567890" maxlength="10"
+                        class="input input-bordered w-full transition-all duration-200 focus:ring-2 focus:ring-primary/20"
+                        [class.input-error]="phoneError()" />
+                    @if (phoneError()) {
+                    <label class="label py-0">
+                        <span class="label-text-alt text-error">{{ phoneError() }}</span>
+                    </label>
+                    } @else {
+                    <label class="label py-0">
+                        <span class="label-text-alt text-base-content/50">Solo 10 dígitos numéricos</span>
+                    </label>
+                    }
                 </div>
 
                 <div class="form-control">
@@ -372,7 +433,12 @@
                     <input type="number" [value]="formData().calificacion"
                         (input)="updateFormField('calificacion', $event)" placeholder="4.5"
                         class="input input-bordered w-full transition-all duration-200 focus:ring-2 focus:ring-primary/20"
-                        min="1" max="5" step="0.1" />
+                        [class.input-error]="calificacionError()" min="0" max="5" step="0.1" />
+                    @if (calificacionError()) {
+                    <label class="label py-0">
+                        <span class="label-text-alt text-error">{{ calificacionError() }}</span>
+                    </label>
+                    }
                 </div>
 
                 <div class="form-control">
@@ -400,10 +466,10 @@
                     Cancelar
                 </button>
                 <button type="submit"
-                    class="btn gap-2 transition-all duration-300 hover:scale-105 active:scale-95 shadow-lg"
+                    class="btn gap-2 transition-all duration-300 hover:scale-105 active:scale-95 shadow-lg disabled:opacity-50"
                     [class.btn-primary]="!editMode()" [class.btn-warning]="editMode()"
                     [class.hover:shadow-primary/25]="!editMode()" [class.hover:shadow-warning/25]="editMode()"
-                    [disabled]="loading()">
+                    [disabled]="loading() || !isRestaurantFormValid()">
                     @if (loading()) {
                     <span class="loading loading-spinner loading-sm"></span>
                     } @else {

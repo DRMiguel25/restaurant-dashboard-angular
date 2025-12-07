@@ -6,6 +6,9 @@ import { RestaurantService } from '../../services/restaurant.service';
 import { AuthService } from '../../services/auth.service';
 import { Restaurante, RestauranteCreate } from '../../models/restaurante.model';
 
+// Validation patterns
+const PHONE_PATTERN = /^[0-9]{10}$/;
+
 @Component({
     selector: 'app-dashboard',
     standalone: true,
@@ -16,6 +19,8 @@ import { Restaurante, RestauranteCreate } from '../../models/restaurante.model';
 export class DashboardComponent implements OnInit {
     restaurantes = signal<Restaurante[]>([]);
     loading = signal(false);
+    searchQuery = signal('');
+    private searchTimeout: any = null;
 
     // Toast notifications
     toast = signal<{ show: boolean; type: 'success' | 'error' | 'info'; message: string }>({
@@ -43,6 +48,20 @@ export class DashboardComponent implements OnInit {
 
     // Theme
     isDarkMode = signal(false);
+
+    // Validation error signals
+    phoneError = signal('');
+    calificacionError = signal('');
+
+    // Computed: check if restaurant form is valid
+    isRestaurantFormValid = computed(() => {
+        const hasName = !!this.formData().nombre;
+        const phoneValid = !this.formData().telefono || PHONE_PATTERN.test(this.formData().telefono || '');
+        const cal = this.formData().calificacion;
+        const calValid = cal === undefined || cal === null || (cal >= 0 && cal <= 5);
+        const noErrors = !this.phoneError() && !this.calificacionError();
+        return hasName && phoneValid && calValid && noErrors;
+    });
 
     userName = computed(() => {
         const user = this.authService.getUser();
@@ -82,7 +101,7 @@ export class DashboardComponent implements OnInit {
     loadRestaurantes(): void {
         this.loading.set(true);
 
-        this.restaurantService.listar().subscribe({
+        this.restaurantService.listar(this.searchQuery()).subscribe({
             next: (response) => {
                 this.loading.set(false);
                 if (!response.error && response.data) {
@@ -97,6 +116,24 @@ export class DashboardComponent implements OnInit {
                 console.error(err);
             }
         });
+    }
+
+    onSearchChange(event: Event): void {
+        const value = (event.target as HTMLInputElement).value;
+        this.searchQuery.set(value);
+
+        // Debounce search - wait 400ms before making request
+        if (this.searchTimeout) {
+            clearTimeout(this.searchTimeout);
+        }
+        this.searchTimeout = setTimeout(() => {
+            this.loadRestaurantes();
+        }, 400);
+    }
+
+    clearSearch(): void {
+        this.searchQuery.set('');
+        this.loadRestaurantes();
     }
 
     openCreateModal(): void {
@@ -146,11 +183,54 @@ export class DashboardComponent implements OnInit {
             ...current,
             [field]: field === 'calificacion' ? (value ? parseFloat(value) : undefined) : value
         }));
+
+        // Trigger validation on change
+        if (field === 'telefono') this.validatePhone();
+        if (field === 'calificacion') this.validateCalificacion();
+    }
+
+    validatePhone(): void {
+        const phone = this.formData().telefono;
+        if (!phone) {
+            this.phoneError.set('');
+        } else if (!PHONE_PATTERN.test(phone)) {
+            this.phoneError.set('Debe tener exactamente 10 dígitos numéricos');
+        } else {
+            this.phoneError.set('');
+        }
+    }
+
+    validateCalificacion(): void {
+        const cal = this.formData().calificacion;
+        if (cal === undefined || cal === null) {
+            this.calificacionError.set('');
+        } else if (isNaN(cal) || cal < 0 || cal > 5) {
+            this.calificacionError.set('Debe ser un número entre 0 y 5');
+        } else {
+            this.calificacionError.set('');
+        }
     }
 
     saveRestaurante(): void {
+        // Run validations
+        this.validatePhone();
+        this.validateCalificacion();
+
         if (!this.formData().nombre) {
             this.showToast('error', 'El nombre es obligatorio');
+            return;
+        }
+
+        // Check phone validation
+        if (this.formData().telefono && !PHONE_PATTERN.test(this.formData().telefono || '')) {
+            this.showToast('error', 'El teléfono debe tener exactamente 10 dígitos numéricos');
+            return;
+        }
+
+        // Check calificacion validation
+        const cal = this.formData().calificacion;
+        if (cal !== undefined && (isNaN(cal) || cal < 0 || cal > 5)) {
+            this.showToast('error', 'La calificación debe ser un número entre 0 y 5');
             return;
         }
 

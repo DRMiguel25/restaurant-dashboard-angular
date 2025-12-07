@@ -5,4 +5,5 @@
 /* Global styles */
 body {
     min-height: 100vh;
+    @apply bg-base-200;
 }
