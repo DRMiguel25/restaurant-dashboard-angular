@@ -11,6 +11,12 @@ import {
     User
 } from '../models/user.model';
 
+export interface UpdateProfileRequest {
+    nombre?: string;
+    apellidos?: string;
+    telefono?: string;
+}
+
 @Injectable({
     providedIn: 'root'
 })
@@ -23,6 +29,14 @@ export class AuthService {
         return new HttpHeaders({
             'Content-Type': 'application/json',
             'simple': environment.simpleAuthHeader
+        });
+    }
+
+    private getAuthHeaders(): HttpHeaders {
+        const token = this.getToken();
+        return new HttpHeaders({
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
         });
     }
 
@@ -59,6 +73,25 @@ export class AuthService {
         });
     }
 
+    updateProfile(data: UpdateProfileRequest): Observable<AuthResponse> {
+        return this.http.put<AuthResponse>(`${this.apiUrl}/profile`, data, {
+            headers: this.getAuthHeaders()
+        }).pipe(
+            tap(response => {
+                if (!response.error) {
+                    // Update local user data
+                    const currentUser = this.getUser();
+                    if (currentUser) {
+                        if (data.nombre) currentUser.nombre = data.nombre;
+                        if (data.apellidos) currentUser.apellidos = data.apellidos;
+                        if (data.telefono) currentUser.telefono = data.telefono;
+                        this.setUser(currentUser);
+                    }
+                }
+            })
+        );
+    }
+
     setToken(token: string): void {
         localStorage.setItem('jwt_token', token);
     }
@@ -85,3 +118,4 @@ export class AuthService {
         localStorage.removeItem('current_user');
     }
 }
+

@@ -34,6 +34,15 @@ export class DashboardComponent implements OnInit {
     editMode = signal(false);
     currentRestauranteId = signal('');
 
+    // Profile Modal state
+    showProfileModal = signal(false);
+    profileFormData = signal<{ nombre: string; apellidos: string; telefono: string }>({
+        nombre: '',
+        apellidos: '',
+        telefono: ''
+    });
+    profilePhoneError = signal('');
+
     // Form data
     formData = signal<RestauranteCreate>({
         nombre: '',
@@ -63,10 +72,13 @@ export class DashboardComponent implements OnInit {
         return hasName && phoneValid && calValid && noErrors;
     });
 
-    userName = computed(() => {
+    // User name - using signal instead of computed to allow immediate updates
+    userName = signal('Usuario');
+
+    private refreshUserName(): void {
         const user = this.authService.getUser();
-        return user ? `${user.nombre} ${user.apellidos}` : 'Usuario';
-    });
+        this.userName.set(user ? `${user.nombre} ${user.apellidos}` : 'Usuario');
+    }
 
     // Computed Statistics
     totalRestaurantes = computed(() => this.restaurantes().length);
@@ -131,6 +143,7 @@ export class DashboardComponent implements OnInit {
     ) { }
 
     ngOnInit(): void {
+        this.refreshUserName();
         this.loadRestaurantes();
         // Check saved theme
         const savedTheme = localStorage.getItem('theme');
@@ -359,5 +372,93 @@ export class DashboardComponent implements OnInit {
     logout(): void {
         this.authService.logout();
         this.router.navigate(['/login']);
+    }
+
+    // Profile Modal Methods
+    openProfileModal(): void {
+        const user = this.authService.getUser();
+        if (user) {
+            this.profileFormData.set({
+                nombre: user.nombre || '',
+                apellidos: user.apellidos || '',
+                telefono: user.telefono || ''
+            });
+        }
+        this.profilePhoneError.set('');
+        this.showProfileModal.set(true);
+    }
+
+    closeProfileModal(): void {
+        this.showProfileModal.set(false);
+        this.profilePhoneError.set('');
+    }
+
+    updateProfileField(field: 'nombre' | 'apellidos' | 'telefono', event: Event): void {
+        const value = (event.target as HTMLInputElement).value;
+        this.profileFormData.update(current => ({
+            ...current,
+            [field]: value
+        }));
+        if (field === 'telefono') {
+            this.validateProfilePhone();
+        }
+    }
+
+    validateProfilePhone(): void {
+        const phone = this.profileFormData().telefono;
+        if (!phone) {
+            this.profilePhoneError.set('');
+        } else if (!PHONE_PATTERN.test(phone)) {
+            this.profilePhoneError.set('Debe tener exactamente 10 dígitos numéricos');
+        } else {
+            this.profilePhoneError.set('');
+        }
+    }
+
+    saveProfile(): void {
+        this.validateProfilePhone();
+
+        if (this.profilePhoneError()) {
+            this.showToast('error', 'Corrige los errores antes de guardar');
+            return;
+        }
+
+        const data = this.profileFormData();
+
+        // Check if at least one field has value
+        if (!data.nombre && !data.apellidos && !data.telefono) {
+            this.showToast('error', 'Debes completar al menos un campo');
+            return;
+        }
+
+        this.loading.set(true);
+
+        this.authService.updateProfile({
+            nombre: data.nombre || undefined,
+            apellidos: data.apellidos || undefined,
+            telefono: data.telefono || undefined
+        }).subscribe({
+            next: (response) => {
+                this.loading.set(false);
+                if (!response.error) {
+                    this.refreshUserName(); // Update displayed name immediately
+                    this.showToast('success', '✓ Perfil actualizado exitosamente');
+                    this.closeProfileModal();
+                } else {
+                    this.showToast('error', response.msg || 'Error al actualizar perfil');
+                }
+            },
+            error: (err) => {
+                this.loading.set(false);
+                this.showToast('error', 'Error de conexión');
+                console.error(err);
+            }
+        });
+    }
+
+    goToChangePassword(): void {
+        // Redirect to forgot-password page which uses Pipedream/.NET for password change
+        this.authService.logout();
+        this.router.navigate(['/forgot-password']);
     }
 }
