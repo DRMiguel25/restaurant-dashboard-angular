@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { AuthService } from '../../services/auth.service';
+import { ConfettiService } from '../../services/confetti.service';
 
 @Component({
     selector: 'app-register',
@@ -31,6 +32,13 @@ export class RegisterComponent {
     private phonePattern = /^[0-9]{10}$/;
     private emailPattern = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
 
+    // Error message translations
+    private errorMessages: { [key: string]: string } = {
+        'email_already_exists': 'Este correo ya está registrado. ¿Ya tienes una cuenta?',
+        'empty_params': 'Por favor completa todos los campos requeridos',
+        'incorrect_insert': 'Error al crear la cuenta. Intenta de nuevo.',
+    };;
+
     // Computed: check if form is valid
     isFormValid = computed(() => {
         const hasRequiredFields = this.nombre() && this.apellidos() && this.email() && this.password();
@@ -42,8 +50,13 @@ export class RegisterComponent {
 
     constructor(
         private authService: AuthService,
-        private router: Router
+        private router: Router,
+        private confettiService: ConfettiService
     ) { }
+
+    private translateError(errorCode: string): string {
+        return this.errorMessages[errorCode] || 'Error al crear la cuenta. Intenta de nuevo.';
+    }
 
     validateEmail(): void {
         const email = this.email();
@@ -120,17 +133,25 @@ export class RegisterComponent {
             next: (response) => {
                 this.loading.set(false);
                 if (!response.error) {
-                    this.success.set('Cuenta creada exitosamente. Redirigiendo al login...');
+                    // 🎉 Launch confetti celebration!
+                    this.confettiService.launch();
+                    this.success.set('¡Cuenta creada exitosamente! Redirigiendo al login...');
                     setTimeout(() => {
                         this.router.navigate(['/login']);
-                    }, 2000);
+                    }, 2500);
                 } else {
-                    this.error.set(response.msg || 'Error al crear la cuenta');
+                    this.error.set(this.translateError(response.msg));
                 }
             },
             error: (err) => {
                 this.loading.set(false);
-                this.error.set('Error de conexión con el servidor');
+                if (err.status === 400 && err.error?.msg) {
+                    this.error.set(this.translateError(err.error.msg));
+                } else if (err.status === 0) {
+                    this.error.set('No se pudo conectar al servidor. Verifica tu conexión.');
+                } else {
+                    this.error.set('Error de conexión con el servidor');
+                }
                 console.error(err);
             }
         });

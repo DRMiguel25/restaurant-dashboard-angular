@@ -117,5 +117,11 @@ export class AuthService {
         localStorage.removeItem('jwt_token');
         localStorage.removeItem('current_user');
     }
+
+    deleteAccount(): Observable<AuthResponse> {
+        return this.http.delete<AuthResponse>(`${this.apiUrl}/profile`, {
+            headers: this.getAuthHeaders()
+        });
+    }
 }
 

@@ -17,10 +17,23 @@ export class LoginComponent {
     loading = signal(false);
     error = signal('');
 
+    // Error message translations
+    private errorMessages: { [key: string]: string } = {
+        'no_user': 'Este correo no está registrado. ¿Quieres crear una cuenta?',
+        'invalid_credentials': 'La contraseña es incorrecta. Intenta de nuevo.',
+        'empty_params': 'Por favor completa todos los campos',
+        'not_token': 'Error de autenticación. Intenta de nuevo.',
+        'account_deleted': 'Esta cuenta ha sido eliminada. Puedes registrarte nuevamente.',
+    };
+
     constructor(
         private authService: AuthService,
         private router: Router
     ) { }
+
+    private translateError(errorCode: string): string {
+        return this.errorMessages[errorCode] || 'Error al iniciar sesión. Intenta de nuevo.';
+    }
 
     onSubmit(): void {
         if (!this.email() || !this.password()) {
@@ -40,12 +53,20 @@ export class LoginComponent {
                 if (!response.error) {
                     this.router.navigate(['/dashboard']);
                 } else {
-                    this.error.set(response.msg || 'Error al iniciar sesión');
+                    // Translate backend error codes to user-friendly messages
+                    this.error.set(this.translateError(response.msg));
                 }
             },
             error: (err) => {
                 this.loading.set(false);
-                this.error.set('Error de conexión con el servidor');
+                // Handle HTTP errors
+                if (err.status === 400 && err.error?.msg) {
+                    this.error.set(this.translateError(err.error.msg));
+                } else if (err.status === 0) {
+                    this.error.set('No se pudo conectar al servidor. Verifica tu conexión.');
+                } else {
+                    this.error.set('Error de conexión con el servidor');
+                }
                 console.error(err);
             }
         });

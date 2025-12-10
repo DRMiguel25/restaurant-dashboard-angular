@@ -21,10 +21,23 @@ export class ForgotPasswordComponent {
     error = signal('');
     success = signal('');
 
+    // Error message translations
+    private errorMessages: { [key: string]: string } = {
+        'no_user': 'Este correo no está registrado en el sistema.',
+        'invalid_code': 'El código de verificación es incorrecto o ha expirado.',
+        'pipedream_error': 'Error al enviar el correo. Intenta de nuevo en unos minutos.',
+        'error_updating_password': 'Error al actualizar la contraseña. Intenta de nuevo.',
+        'empty_params': 'Por favor completa todos los campos',
+    };
+
     constructor(
         private authService: AuthService,
         private router: Router
     ) { }
+
+    private translateError(errorCode: string): string {
+        return this.errorMessages[errorCode] || 'Ocurrió un error. Intenta de nuevo.';
+    }
 
     requestCode(): void {
         if (!this.email()) {
@@ -42,12 +55,18 @@ export class ForgotPasswordComponent {
                     this.success.set('Se ha enviado un código de recuperación a tu correo');
                     this.step.set(2);
                 } else {
-                    this.error.set(response.msg || 'Error al enviar código');
+                    this.error.set(this.translateError(response.msg));
                 }
             },
             error: (err) => {
                 this.loading.set(false);
-                this.error.set('Error de conexión con el servidor');
+                if (err.status === 400 && err.error?.msg) {
+                    this.error.set(this.translateError(err.error.msg));
+                } else if (err.status === 0) {
+                    this.error.set('No se pudo conectar al servidor. Verifica tu conexión.');
+                } else {
+                    this.error.set('Error de conexión con el servidor');
+                }
                 console.error(err);
             }
         });
@@ -86,12 +105,18 @@ export class ForgotPasswordComponent {
                         this.router.navigate(['/login']);
                     }, 2000);
                 } else {
-                    this.error.set(response.msg || 'Error al actualizar contraseña');
+                    this.error.set(this.translateError(response.msg));
                 }
             },
             error: (err) => {
                 this.loading.set(false);
-                this.error.set('Error de conexión con el servidor');
+                if (err.status === 400 && err.error?.msg) {
+                    this.error.set(this.translateError(err.error.msg));
+                } else if (err.status === 0) {
+                    this.error.set('No se pudo conectar al servidor. Verifica tu conexión.');
+                } else {
+                    this.error.set('Error de conexión con el servidor');
+                }
                 console.error(err);
             }
         });

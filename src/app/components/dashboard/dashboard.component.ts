@@ -43,6 +43,10 @@ export class DashboardComponent implements OnInit {
     });
     profilePhoneError = signal('');
 
+    // Details Modal state
+    showDetailsModal = signal(false);
+    selectedRestaurante = signal<Restaurante | null>(null);
+
     // Form data
     formData = signal<RestauranteCreate>({
         nombre: '',
@@ -74,10 +78,17 @@ export class DashboardComponent implements OnInit {
 
     // User name - using signal instead of computed to allow immediate updates
     userName = signal('Usuario');
+    userEmail = signal('');
 
     private refreshUserName(): void {
         const user = this.authService.getUser();
         this.userName.set(user ? `${user.nombre} ${user.apellidos}` : 'Usuario');
+        this.userEmail.set(user?.email || '');
+    }
+
+    // Check if current user is the owner of a restaurant
+    isOwner(restaurante: Restaurante): boolean {
+        return restaurante.nombre_creador === this.userEmail();
     }
 
     // Computed Statistics
@@ -213,6 +224,12 @@ export class DashboardComponent implements OnInit {
     }
 
     openEditModal(restaurante: Restaurante): void {
+        // Check if user is the owner
+        if (!this.isOwner(restaurante)) {
+            this.showToast('error', 'No puedes editar este restaurante. Solo puedes editar los que tú creaste.');
+            return;
+        }
+
         this.editMode.set(true);
         this.currentRestauranteId.set(restaurante.id);
         this.formData.set({
@@ -344,14 +361,20 @@ export class DashboardComponent implements OnInit {
         }
     }
 
-    deleteRestaurante(id: string, nombre: string): void {
-        if (!confirm(`¿Estás seguro de eliminar "${nombre}"?`)) {
+    deleteRestaurante(restaurante: Restaurante): void {
+        // Check if user is the owner
+        if (!this.isOwner(restaurante)) {
+            this.showToast('error', 'No puedes eliminar este restaurante. Solo puedes eliminar los que tú creaste.');
+            return;
+        }
+
+        if (!confirm(`¿Estás seguro de eliminar "${restaurante.nombre}"?`)) {
             return;
         }
 
         this.loading.set(true);
 
-        this.restaurantService.eliminar(id).subscribe({
+        this.restaurantService.eliminar(restaurante.id).subscribe({
             next: (response) => {
                 this.loading.set(false);
                 if (!response.error) {
@@ -460,5 +483,60 @@ export class DashboardComponent implements OnInit {
         // Redirect to forgot-password page which uses Pipedream/.NET for password change
         this.authService.logout();
         this.router.navigate(['/forgot-password']);
+    }
+
+    confirmDeleteAccount(): void {
+        const confirmed = confirm(
+            '⚠️ ¿Estás seguro de que deseas eliminar tu cuenta?\n\n' +
+            'Esta acción no se puede deshacer. Tu cuenta será desactivada y no podrás acceder a ella.\n\n' +
+            'Si deseas re-registrarte en el futuro, podrás hacerlo con el mismo correo electrónico.'
+        );
+
+        if (!confirmed) {
+            return;
+        }
+
+        this.loading.set(true);
+
+        this.authService.deleteAccount().subscribe({
+            next: (response) => {
+                this.loading.set(false);
+                if (!response.error) {
+                    this.showToast('success', '✓ Tu cuenta ha sido eliminada');
+                    this.closeProfileModal();
+                    // Wait a bit for toast to show, then logout
+                    setTimeout(() => {
+                        this.authService.logout();
+                        this.router.navigate(['/login']);
+                    }, 1500);
+                } else {
+                    this.showToast('error', response.msg || 'Error al eliminar la cuenta');
+                }
+            },
+            error: (err) => {
+                this.loading.set(false);
+                this.showToast('error', 'Error de conexión');
+                console.error(err);
+            }
+        });
+    }
+
+    // Details Modal Methods
+    openDetailsModal(restaurante: Restaurante): void {
+        this.selectedRestaurante.set(restaurante);
+        this.showDetailsModal.set(true);
+    }
+
+    closeDetailsModal(): void {
+        this.showDetailsModal.set(false);
+        this.selectedRestaurante.set(null);
+    }
+
+    openEditFromDetails(): void {
+        const restaurante = this.selectedRestaurante();
+        if (restaurante) {
+            this.closeDetailsModal();
+            this.openEditModal(restaurante);
+        }
     }
 }

@@ -7,9 +7,9 @@ import { AuthGuard } from './guards/auth.guard';
 
 export const routes: Routes = [
     { path: '', redirectTo: '/login', pathMatch: 'full' },
-    { path: 'login', component: LoginComponent },
-    { path: 'register', component: RegisterComponent },
-    { path: 'forgot-password', component: ForgotPasswordComponent },
-    { path: 'dashboard', component: DashboardComponent, canActivate: [AuthGuard] },
+    { path: 'login', component: LoginComponent, data: { animation: 'LoginPage' } },
+    { path: 'register', component: RegisterComponent, data: { animation: 'RegisterPage' } },
+    { path: 'forgot-password', component: ForgotPasswordComponent, data: { animation: 'ForgotPage' } },
+    { path: 'dashboard', component: DashboardComponent, canActivate: [AuthGuard], data: { animation: 'DashboardPage' } },
     { path: '**', redirectTo: '/login' }
 ];
